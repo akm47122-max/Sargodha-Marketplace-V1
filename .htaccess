@@ -1,0 +1,45 @@
+# SARGODHAMART - Production Apache / Hostinger Shared Hosting Configuration
+# Security, Directory Protection, and Clean Routing
+
+# 1. Disable Directory Browsing & Default Index
+Options -Indexes
+DirectoryIndex index.php index.html
+
+# 2. Prevent Access to Sensitive Files, Credentials & Database Dumps
+<FilesMatch "^(database.*|\.env.*|\.git.*|composer\..*|package.*|tsconfig.*|.*\.sql|.*\.sqlite|.*\.md)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # Block direct access to sensitive PHP backend directories
+    RewriteRule ^config/ - [F,L]
+    RewriteRule ^includes/ - [F,L]
+    RewriteRule ^migrations/ - [F,L]
+    RewriteRule ^src/ - [F,L]
+
+    # Block script execution inside user uploads directory
+    RewriteRule ^uploads/.*\.php$ - [F,L]
+
+    # Clean API Route Aliases
+    RewriteRule ^api/telegram/(.*)$ api/telegram.php?action=$1 [QSA,L]
+    RewriteRule ^api/auth/(.*)$ api/auth.php?action=$1 [QSA,L]
+</IfModule>
+
+# 3. Security Headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# 4. Upload Size and Execution Settings
+<IfModule mod_php.c>
+    php_value upload_max_filesize 10M
+    php_value post_max_size 12M
+    php_value max_execution_time 300
+    php_value max_input_time 300
+</IfModule>

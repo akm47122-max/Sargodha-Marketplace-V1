@@ -1,0 +1,155 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == 'akm47122@gmail.com' ||
+        request.auth.token.email == 'admin@sargodhamart.com'
+      );
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Admins registry
+    match /admins/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isOwner(userId) &&
+        incoming().role == 'user' &&
+        (incoming().activationStatus == 'pending' || incoming().activationStatus == 'active');
+      allow update: if isSignedIn() && (
+        isAdmin() ||
+        (isOwner(userId) &&
+          incoming().role == existing().role &&
+          incoming().activationStatus == existing().activationStatus &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'name', 'mobile', 'city', 'area', 'telegramNumber', 'contactPrivacy', 'updatedAt'
+          ])
+        )
+      );
+      allow delete: if isAdmin();
+    }
+
+    // Product Listings
+    match /listings/{listingId} {
+      allow read: if true;
+      allow create: if isSignedIn() &&
+        incoming().userId == request.auth.uid &&
+        incoming().title is string && incoming().title.size() <= 200 &&
+        incoming().price is number;
+      allow update: if isSignedIn() && (
+        isAdmin() ||
+        (resource.data.userId == request.auth.uid && incoming().userId == resource.data.userId)
+      );
+      allow delete: if isSignedIn() && (
+        isAdmin() ||
+        resource.data.userId == request.auth.uid
+      );
+    }
+
+    // Jobs
+    match /jobs/{jobId} {
+      allow read: if true;
+      allow create: if isSignedIn() &&
+        incoming().userId == request.auth.uid &&
+        incoming().title is string && incoming().title.size() <= 200;
+      allow update: if isSignedIn() && (
+        isAdmin() ||
+        (resource.data.userId == request.auth.uid && incoming().userId == resource.data.userId)
+      );
+      allow delete: if isSignedIn() && (
+        isAdmin() ||
+        resource.data.userId == request.auth.uid
+      );
+    }
+
+    // Seller Activation Payments Proofs
+    match /activation_payments/{paymentId} {
+      allow read: if isSignedIn() && (isAdmin() || resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() &&
+        incoming().userId == request.auth.uid &&
+        incoming().status == 'pending' &&
+        incoming().amount is number &&
+        incoming().senderNumber is string &&
+        incoming().transactionId is string;
+      allow update: if isAdmin(); // Only verified administrators can approve/reject payments
+      allow delete: if isAdmin();
+    }
+
+    // College Admissions & Campus Ads
+    match /colleges/{collegeId} {
+      allow read: if true;
+      allow create: if isSignedIn() &&
+        incoming().institute_name is string &&
+        incoming().institute_name.size() <= 200;
+      allow update, delete: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+    }
+
+    // Favorites
+    match /favorites/{favoriteId} {
+      allow read: if isSignedIn() && (isAdmin() || resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid;
+      allow delete: if isSignedIn() && (isAdmin() || resource.data.userId == request.auth.uid);
+    }
+
+    // Seller Reviews
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isSignedIn() &&
+        incoming().reviewerId == request.auth.uid &&
+        incoming().rating is number &&
+        incoming().comment is string;
+      allow update, delete: if isSignedIn() && (
+        isAdmin() ||
+        resource.data.reviewerId == request.auth.uid
+      );
+    }
+
+    // User Notifications
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn() && (isAdmin() || resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() &&
+        resource.data.userId == request.auth.uid &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['isRead']);
+      allow delete: if isSignedIn() && (isAdmin() || resource.data.userId == request.auth.uid);
+    }
+
+    // Website Settings
+    match /settings/{settingDoc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}

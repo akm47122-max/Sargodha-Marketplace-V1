@@ -1,0 +1,1652 @@
+import React, { useState } from 'react';
+import {
+  Shield,
+  Users,
+  CheckCircle2,
+  Clock,
+  ShoppingBag,
+  Briefcase,
+  AlertTriangle,
+  Sparkles,
+  Eye,
+  Check,
+  X,
+  Trash2,
+  ExternalLink,
+  Settings,
+  Image as ImageIcon,
+  LogOut,
+  Send,
+  RefreshCw,
+  MapPin,
+  Layers,
+  MessageCircle,
+  Megaphone,
+  Star,
+  FileText,
+  CreditCard,
+  Truck,
+  ShieldCheck,
+  Server,
+  GraduationCap,
+} from 'lucide-react';
+import {
+  UserProfile,
+  Listing,
+  JobPost,
+  ActivationPayment,
+  ReportItem,
+  SiteSettings,
+  AnnouncementItem,
+  TelegramLogItem,
+  District,
+  Tehsil,
+  AreaLocation,
+  PromotionPayment,
+  DigitalSkillProfile,
+  AdvertisingPackage,
+  Advertisement,
+  AdvertisingPayment,
+  UserTelegramAuditLog,
+  PaymentMethod,
+  TruckListing,
+  LoadRequest,
+  TransporterProfile,
+  FreightQuotation,
+  TransportBooking,
+  TransporterSubscriptionPlan,
+  TransporterSubscriptionPurchase,
+  BookingStatus,
+  SellerVerificationRecord,
+  CollegeAd,
+} from '../types';
+import { AdminSettingsManager } from './AdminSettingsManager';
+import { AdminLocationManager } from './AdminLocationManager';
+import { AdminAdvertisingManager } from './AdminAdvertisingManager';
+import { AdminPaymentMethodsManager } from './AdminPaymentMethodsManager';
+import { AdminReportsManager } from './AdminReportsManager';
+import { AdminFreightManager } from './AdminFreightManager';
+import { AdminVerificationManager } from './AdminVerificationManager';
+import { AdminCollegesManager } from './AdminCollegesManager';
+import { VerifiedBadge } from './VerifiedBadge';
+
+interface AdminPanelProps {
+  currentUser: UserProfile;
+  users: UserProfile[];
+  listings: Listing[];
+  jobs: JobPost[];
+  payments: ActivationPayment[];
+  promotions?: PromotionPayment[];
+  onApprovePromotion?: (id: number) => void;
+  onRejectPromotion?: (id: number, reason: string) => void;
+  skills?: DigitalSkillProfile[];
+  onToggleSkillStatus?: (id: number) => void;
+  onDeleteSkill?: (id: number) => void;
+  advertisingPackages?: AdvertisingPackage[];
+  advertisements?: Advertisement[];
+  onSaveAdvertisingPackage?: (pkg: AdvertisingPackage) => void;
+  onDeleteAdvertisingPackage?: (id: number) => void;
+  onApproveAdvertisement?: (id: number) => void;
+  onRejectAdvertisement?: (id: number, reason: string) => void;
+  onToggleAdSuspension?: (id: number) => void;
+  onRetryAdTelegram?: (id: number) => Promise<boolean>;
+  reports: ReportItem[];
+  settings: SiteSettings;
+  onSaveSettings: (updated: SiteSettings) => void;
+  announcements: AnnouncementItem[];
+  onAddAnnouncement: (item: Omit<AnnouncementItem, 'id' | 'createdAt'>) => void;
+  onUpdateAnnouncement: (id: number, item: Partial<AnnouncementItem>) => void;
+  onDeleteAnnouncement: (id: number) => void;
+  onApprovePayment: (paymentId: number, userId: number) => void;
+  onRejectPayment: (paymentId: number) => void;
+  onToggleListingStatus: (listingId: number) => void;
+  onToggleListingFeatured: (listingId: number) => void;
+  onDeleteListing: (listingId: number) => void;
+  onToggleJobStatus: (jobId: number) => void;
+  onDeleteJob: (jobId: number) => void;
+  onResolveReport: (reportId: number) => void;
+  onForceLogoutUser: (userId: number) => void;
+  telegramLogs?: TelegramLogItem[];
+  onPublishToTelegram?: (type: 'product' | 'job' | 'announcement', id: number, force?: boolean) => Promise<boolean>;
+  onAddTelegramLog?: (log: TelegramLogItem) => void;
+  districts?: District[];
+  tehsils?: Tehsil[];
+  areas?: AreaLocation[];
+  onAddDistrict?: (name: string) => void;
+  onUpdateDistrict?: (id: number, updates: Partial<District>) => void;
+  onDeleteDistrict?: (id: number) => void;
+  onAddTehsil?: (name: string, districtId: number) => void;
+  onUpdateTehsil?: (id: number, updates: Partial<Tehsil>) => void;
+  onDeleteTehsil?: (id: number) => void;
+  onAddArea?: (name: string, tehsilId: number) => void;
+  onUpdateArea?: (id: number, updates: Partial<AreaLocation>) => void;
+  onDeleteArea?: (id: number) => void;
+  onApproveUserTelegram?: (userId: number) => void;
+  onRejectUserTelegram?: (userId: number, reason: string) => void;
+  onRevokeUserTelegram?: (userId: number) => void;
+  telegramAuditLogs?: UserTelegramAuditLog[];
+  paymentMethods?: PaymentMethod[];
+  onSavePaymentMethod?: (method: PaymentMethod) => void;
+  onDeletePaymentMethod?: (id: number) => void;
+  onTogglePaymentMethodStatus?: (id: number) => void;
+  onUpdateReportStatus?: (id: number, status: ReportItem['status'], action?: ReportItem['moderationAction'], notes?: string) => void;
+  onDeleteContent?: (targetType: string, targetId: number) => void;
+
+  // Freight & Transport props
+  trucks?: TruckListing[];
+  loads?: LoadRequest[];
+  transporters?: TransporterProfile[];
+  quotations?: FreightQuotation[];
+  bookings?: TransportBooking[];
+  subscriptionPlans?: TransporterSubscriptionPlan[];
+  subscriptionPurchases?: TransporterSubscriptionPurchase[];
+  onApproveSubscription?: (id: number) => void;
+  onRejectSubscription?: (id: number, reason: string) => void;
+  onSaveSubscriptionPlan?: (plan: TransporterSubscriptionPlan) => void;
+  onDeleteSubscriptionPlan?: (planId: string) => void;
+  onToggleTransporterStatus?: (id: number, status: 'APPROVED' | 'REJECTED' | 'PENDING') => void;
+  onUpdateDealStatus?: (bookingId: number, status: BookingStatus, notes?: string) => void;
+
+  // Verified Badge & Seller Verification props
+  verifications?: SellerVerificationRecord[];
+  onApproveVerification?: (id: number) => void;
+  onRejectVerification?: (id: number, reason: string) => void;
+  onRevokeVerification?: (id: number, reason: string) => void;
+  onToggleUserVerified?: (userId: number) => void;
+  onOpenHostingerGuide?: () => void;
+
+  // Colleges, Admissions & Campus Ads props
+  collegeAds?: CollegeAd[];
+  onApproveCollegeAd?: (id: number) => void;
+  onRejectCollegeAd?: (id: number, reason: string) => void;
+  onSuspendCollegeAd?: (id: number) => void;
+  onDeleteCollegeAd?: (id: number) => void;
+}
+
+export const AdminPanel: React.FC<AdminPanelProps> = ({
+  currentUser,
+  users,
+  listings,
+  jobs,
+  payments,
+  promotions = [],
+  onApprovePromotion = () => {},
+  onRejectPromotion = () => {},
+  skills = [],
+  onToggleSkillStatus = () => {},
+  onDeleteSkill = () => {},
+  advertisingPackages = [],
+  advertisements = [],
+  onSaveAdvertisingPackage = () => {},
+  onDeleteAdvertisingPackage = () => {},
+  onApproveAdvertisement = () => {},
+  onRejectAdvertisement = () => {},
+  onToggleAdSuspension = () => {},
+  onRetryAdTelegram = async () => false,
+  reports,
+  settings,
+  onSaveSettings,
+  announcements,
+  onAddAnnouncement,
+  onUpdateAnnouncement,
+  onDeleteAnnouncement,
+  onOpenHostingerGuide,
+  onApprovePayment,
+  onRejectPayment,
+  onToggleListingStatus,
+  onToggleListingFeatured,
+  onDeleteListing,
+  onToggleJobStatus,
+  onDeleteJob,
+  onResolveReport,
+  onForceLogoutUser,
+  telegramLogs = [],
+  onPublishToTelegram,
+  onAddTelegramLog,
+  districts = [],
+  tehsils = [],
+  areas = [],
+  onAddDistrict = () => {},
+  onUpdateDistrict = () => {},
+  onDeleteDistrict = () => {},
+  onAddTehsil = () => {},
+  onUpdateTehsil = () => {},
+  onDeleteTehsil = () => {},
+  onAddArea = () => {},
+  onUpdateArea = () => {},
+  onDeleteArea = () => {},
+  onApproveUserTelegram = () => {},
+  onRejectUserTelegram = () => {},
+  onRevokeUserTelegram = () => {},
+  telegramAuditLogs = [],
+  paymentMethods = [],
+  onSavePaymentMethod = () => {},
+  onDeletePaymentMethod = () => {},
+  onTogglePaymentMethodStatus = () => {},
+  onUpdateReportStatus,
+  onDeleteContent,
+  trucks = [],
+  loads = [],
+  transporters = [],
+  quotations = [],
+  bookings = [],
+  subscriptionPlans = [],
+  subscriptionPurchases = [],
+  onApproveSubscription,
+  onRejectSubscription,
+  onSaveSubscriptionPlan,
+  onDeleteSubscriptionPlan,
+  onToggleTransporterStatus,
+  onUpdateDealStatus,
+  verifications = [],
+  onApproveVerification,
+  onRejectVerification,
+  onRevokeVerification,
+  onToggleUserVerified,
+  collegeAds = [],
+  onApproveCollegeAd = () => {},
+  onRejectCollegeAd = () => {},
+  onSuspendCollegeAd = () => {},
+  onDeleteCollegeAd = () => {},
+}) => {
+  const [activeTab, setActiveTab] = useState<
+    'overview' | 'activations' | 'promotions' | 'advertising' | 'colleges' | 'payments' | 'skills' | 'products' | 'jobs' | 'locations' | 'users' | 'telegram' | 'reports' | 'freight' | 'verifications' | 'settings'
+  >('activations');
+  const [selectedVerificationPayment, setSelectedVerificationPayment] = useState<ActivationPayment | null>(null);
+
+  // Telegram verification queue sub-states
+  const [telegramFilter, setTelegramFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
+  const [rejectTelegramUserId, setRejectTelegramUserId] = useState<number | null>(null);
+  const [telegramRejectReason, setTelegramRejectReason] = useState('');
+
+  // Promotion tab sub-states
+  const [promoTab, setPromoTab] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED'>('PENDING');
+  const [promoTimeframe, setPromoTimeframe] = useState<'today' | '7days' | '30days' | 'all'>('all');
+  const [selectedPromoScreenshot, setSelectedPromoScreenshot] = useState<string | null>(null);
+  const [rejectPromoModalId, setRejectPromoModalId] = useState<number | null>(null);
+  const [rejectionReasonText, setRejectionReasonText] = useState('');
+
+  // 12 Key KPI Metrics
+  const totalUsers = users.length;
+  const activeUsers = users.filter((u) => u.activationStatus === 'active').length;
+  const pendingActivations = payments.filter((p) => p.status === 'pending').length;
+  const approvedActivations = payments.filter((p) => p.status === 'approved').length;
+  const pendingPromotions = promotions.filter((p) => p.status === 'PENDING').length;
+  const approvedPromotions = promotions.filter((p) => p.status === 'APPROVED').length;
+  const totalPromoRevenue = promotions
+    .filter((p) => p.status === 'APPROVED')
+    .reduce((acc, curr) => acc + curr.amount, 0);
+  const totalProducts = listings.length;
+  const activeProducts = listings.filter((l) => l.status === 'published').length;
+  const disabledProducts = listings.filter((l) => l.status === 'disabled').length;
+  const featuredProducts = listings.filter((l) => l.isFeatured).length;
+  const totalJobs = jobs.length;
+  const activeJobs = jobs.filter((j) => j.status === 'published').length;
+  const pendingReports = reports.filter((r) => r.status === 'pending').length;
+
+  return (
+    <div className="py-8 px-4 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-200">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-rose-500 to-orange-500 flex items-center justify-center text-white shadow-lg shadow-rose-500/25">
+            <Shield className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-black text-slate-900">SargodhaMart Administrator Portal</h1>
+            <p className="text-slate-500 text-xs font-medium">
+              Direct verification of Rs. 1,000 payments, WhatsApp channel proof, and marketplace moderation
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {onOpenHostingerGuide && (
+            <button
+              onClick={onOpenHostingerGuide}
+              className="px-3.5 py-1.5 rounded-xl text-xs font-black bg-purple-50 text-purple-900 border border-purple-200 hover:bg-purple-100 flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors"
+            >
+              <Server className="w-3.5 h-3.5 text-purple-600" />
+              <span>Hostinger Guide (ہوسٹنگر)</span>
+            </button>
+          )}
+          <span className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white border border-slate-200 text-slate-700 shadow-xs">
+            Admin: <strong className="text-rose-600 font-bold">{currentUser.name}</strong>
+          </span>
+        </div>
+      </div>
+
+      {/* 11 KPI Metrics Grid - White Neon Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-8">
+        <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-xs">
+          <div className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Total Users</div>
+          <div className="text-xl font-black text-slate-900 mt-1">{totalUsers}</div>
+        </div>
+        <div className="p-3.5 rounded-2xl bg-white border border-emerald-200 shadow-xs">
+          <div className="text-emerald-700 text-[10px] font-bold uppercase tracking-wider">Active Sellers</div>
+          <div className="text-xl font-black text-emerald-700 mt-1">{activeUsers}</div>
+        </div>
+        <div className="p-3.5 rounded-2xl bg-rose-50/60 border border-rose-300 shadow-[0_0_15px_rgba(244,63,94,0.1)]">
+          <div className="text-rose-700 text-[10px] font-bold uppercase tracking-wider">Pending Activations</div>
+          <div className="text-xl font-black text-rose-700 mt-1">{pendingActivations}</div>
+        </div>
+        <div className="p-3.5 rounded-2xl bg-white border border-cyan-200 shadow-xs">
+          <div className="text-cyan-800 text-[10px] font-bold uppercase tracking-wider">Approved Fees</div>
+          <div className="text-xl font-black text-cyan-800 mt-1">{approvedActivations}</div>
+        </div>
+        <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-xs">
+          <div className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Total Products</div>
+          <div className="text-xl font-black text-slate-900 mt-1">{totalProducts}</div>
+        </div>
+        <div className="p-3.5 rounded-2xl bg-white border border-blue-200 shadow-xs">
+          <div className="text-blue-700 text-[10px] font-bold uppercase tracking-wider">Active Products</div>
+          <div className="text-xl font-black text-blue-700 mt-1">{activeProducts}</div>
+        </div>
+        <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-xs">
+          <div className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Disabled Products</div>
+          <div className="text-xl font-black text-slate-500 mt-1">{disabledProducts}</div>
+        </div>
+        <div className="p-3.5 rounded-2xl bg-white border border-fuchsia-200 shadow-xs">
+          <div className="text-fuchsia-700 text-[10px] font-bold uppercase tracking-wider">Featured Ads</div>
+          <div className="text-xl font-black text-fuchsia-700 mt-1">{featuredProducts}</div>
+        </div>
+        <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-xs">
+          <div className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Total Jobs</div>
+          <div className="text-xl font-black text-slate-900 mt-1">{totalJobs}</div>
+        </div>
+        <div className="p-3.5 rounded-2xl bg-white border border-indigo-200 shadow-xs">
+          <div className="text-indigo-700 text-[10px] font-bold uppercase tracking-wider">Active Jobs</div>
+          <div className="text-xl font-black text-indigo-700 mt-1">{activeJobs}</div>
+        </div>
+        <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-300 shadow-xs">
+          <div className="text-amber-800 text-[10px] font-bold uppercase tracking-wider">📣 Promo Queue</div>
+          <div className="text-xl font-black text-amber-700 mt-1">{pendingPromotions}</div>
+        </div>
+        <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-300 shadow-xs">
+          <div className="text-emerald-800 text-[10px] font-bold uppercase tracking-wider">Promo Revenue</div>
+          <div className="text-xl font-black text-emerald-700 mt-1">Rs. {totalPromoRevenue.toLocaleString()}</div>
+        </div>
+        <div className="p-3.5 rounded-2xl bg-white border border-amber-200 shadow-xs">
+          <div className="text-amber-700 text-[10px] font-bold uppercase tracking-wider">Reports Queue</div>
+          <div className="text-xl font-black text-amber-700 mt-1">{pendingReports}</div>
+        </div>
+      </div>
+
+      {/* Tabs Switcher - White Neon */}
+      <div className="flex items-center gap-2 mb-6 border-b border-slate-200 pb-3 overflow-x-auto text-xs font-bold">
+        <button
+          onClick={() => setActiveTab('activations')}
+          className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 ${
+            activeTab === 'activations'
+              ? 'bg-white text-rose-800 border border-rose-300 shadow-[0_0_12px_rgba(244,63,94,0.18)]'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <span>💳</span> Activation Queue ({payments.filter((p) => p.status === 'pending').length})
+        </button>
+
+        <button
+          onClick={() => setActiveTab('promotions')}
+          className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 ${
+            activeTab === 'promotions'
+              ? 'bg-amber-400 text-slate-950 font-black border border-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.25)]'
+              : 'text-slate-600 hover:text-slate-900 bg-amber-50/50'
+          }`}
+        >
+          <span>📣</span> Promotions ({pendingPromotions})
+        </button>
+
+        <button
+          onClick={() => setActiveTab('advertising')}
+          className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 ${
+            activeTab === 'advertising'
+              ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black border border-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.35)]'
+              : 'text-slate-600 hover:text-slate-900 bg-amber-50/70 border border-amber-200'
+          }`}
+        >
+          <span>📢</span> Advertising ({advertisements.filter((a) => a.status === 'PENDING').length > 0 ? `${advertisements.filter((a) => a.status === 'PENDING').length} Pending` : `${advertisingPackages.length} Pkgs`})
+        </button>
+
+        <button
+          onClick={() => setActiveTab('colleges')}
+          className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 ${
+            activeTab === 'colleges'
+              ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-black border border-indigo-500 shadow-[0_0_12px_rgba(79,70,229,0.35)]'
+              : 'text-indigo-950 hover:text-indigo-900 bg-indigo-50/70 border border-indigo-200'
+          }`}
+        >
+          <GraduationCap className="w-3.5 h-3.5 text-indigo-600" />
+          <span>Colleges &amp; Admissions ({collegeAds.filter((a) => a.status === 'PENDING').length > 0 ? `${collegeAds.filter((a) => a.status === 'PENDING').length} Pending` : `${collegeAds.length} Ads`})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('payments')}
+          className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 ${
+            activeTab === 'payments'
+              ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black border border-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.35)]'
+              : 'text-slate-600 hover:text-slate-900 bg-emerald-50/70 border border-emerald-200'
+          }`}
+        >
+          <CreditCard className="w-3.5 h-3.5 text-emerald-700" />
+          <span>Payment Accounts ({paymentMethods.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('skills')}
+          className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 ${
+            activeTab === 'skills'
+              ? 'bg-white text-fuchsia-800 border border-fuchsia-300 shadow-[0_0_12px_rgba(217,70,239,0.18)] font-black'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <span>💻</span> Digital Skills ({skills.length})
+        </button>
+
+        <button
+          onClick={() => setActiveTab('products')}
+          className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 ${
+            activeTab === 'products'
+              ? 'bg-white text-cyan-800 border border-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.18)]'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <span>📦</span> Products ({listings.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('jobs')}
+          className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 ${
+            activeTab === 'jobs'
+              ? 'bg-white text-blue-800 border border-blue-300 shadow-[0_0_12px_rgba(37,99,235,0.18)]'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <span>💼</span> Jobs & Work ({jobs.length})
+        </button>
+
+        <button
+          onClick={() => setActiveTab('locations')}
+          className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 ${
+            activeTab === 'locations'
+              ? 'bg-white text-emerald-800 border border-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.18)] font-black'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <span>📍</span> Locations ({districts.length} Districts)
+        </button>
+
+        <button
+          onClick={() => setActiveTab('users')}
+          className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 ${
+            activeTab === 'users'
+              ? 'bg-white text-purple-800 border border-purple-300 shadow-[0_0_12px_rgba(168,85,247,0.18)]'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <span>👥</span> Users ({users.length})
+        </button>
+
+        <button
+          onClick={() => setActiveTab('telegram')}
+          className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 ${
+            activeTab === 'telegram'
+              ? 'bg-white text-cyan-800 border border-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.18)] font-black'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Send className="w-3.5 h-3.5 text-cyan-600" />
+          <span>Telegram Verifications</span>
+          {users.filter((u) => u.telegramStatus === 'PENDING').length > 0 && (
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-rose-500 text-white animate-pulse">
+              {users.filter((u) => u.telegramStatus === 'PENDING').length}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab('reports')}
+          className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 ${
+            activeTab === 'reports'
+              ? 'bg-white text-amber-800 border border-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.18)]'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <span>🚩</span> Reports ({reports.length})
+        </button>
+
+        <button
+          onClick={() => setActiveTab('freight')}
+          className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 ${
+            activeTab === 'freight'
+              ? 'bg-amber-400 text-slate-950 font-black border border-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.3)]'
+              : 'text-slate-600 hover:text-slate-900 bg-amber-50/70 border border-amber-200'
+          }`}
+        >
+          <Truck className="w-3.5 h-3.5 text-amber-700" />
+          <span>Truck & Freight ({subscriptionPurchases.filter((p) => p.status === 'PENDING_PAYMENT' || p.status === 'PAYMENT_UNDER_REVIEW').length} Sub Reviews)</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('verifications')}
+          className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 ${
+            activeTab === 'verifications'
+              ? 'bg-blue-600 text-white font-black border border-blue-500 shadow-[0_0_12px_rgba(37,99,235,0.3)]'
+              : 'text-slate-600 hover:text-slate-900 bg-blue-50/70 border border-blue-200'
+          }`}
+        >
+          <ShieldCheck className="w-3.5 h-3.5 text-blue-700" />
+          <span>Verified Badges ({verifications.filter((v) => v.status === 'PENDING' || v.status === 'UNDER_REVIEW').length} Pending)</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('settings')}
+          className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 ${
+            activeTab === 'settings'
+              ? 'bg-white text-cyan-800 border border-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.18)] font-black'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <span>⚙️</span> Website Settings
+        </button>
+      </div>
+
+      {/* TAB 1: Activation Verification Queue */}
+      {activeTab === 'activations' && (
+        <div className="bg-white border border-cyan-200 rounded-3xl p-6 shadow-[0_10px_35px_-5px_rgba(6,182,212,0.12)]">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <span>🛡️</span> Dual-Verification Queue: Rs. 1,000 Payment + WhatsApp Channel Screenshot
+            </h3>
+            <span className="text-xs text-slate-500 font-medium">
+              Each submission requires manual verification of both transfer and channel follow proof.
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            {payments.map((p) => (
+              <div
+                key={p.id}
+                className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4"
+              >
+                <div className="space-y-1 text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-900 text-sm">{p.userName}</span>
+                    <span className="text-[11px] text-slate-500 font-medium">({p.userCity})</span>
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase ${
+                        p.status === 'approved'
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                          : p.status === 'pending'
+                          ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                          : 'bg-slate-200 text-slate-600'
+                      }`}
+                    >
+                      {p.status}
+                    </span>
+                  </div>
+                  <div className="text-slate-600 font-medium">
+                    Phone: <span className="text-slate-900 font-bold">{p.userPhone}</span> • Method:{' '}
+                    <span className="text-cyan-800 font-bold">{p.method}</span> • Sender:{' '}
+                    <span className="text-slate-900 font-mono font-bold">{p.senderNumber}</span>
+                  </div>
+                  <div className="text-slate-600 font-medium">
+                    TRX ID: <span className="font-mono text-cyan-800 font-bold">{p.transactionId}</span> • Amount:{' '}
+                    <strong className="text-emerald-700 font-bold">Rs. {p.amount.toLocaleString()}</strong> • Date: {p.createdAt}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setSelectedVerificationPayment(p)}
+                    className="px-3.5 py-2 rounded-xl text-xs font-bold bg-white hover:bg-slate-100 text-cyan-800 border border-cyan-300 flex items-center gap-1.5 transition-all shadow-xs"
+                  >
+                    <ImageIcon className="w-3.5 h-3.5" />
+                    <span>View Dual Proofs</span>
+                  </button>
+
+                  {p.status === 'pending' && (
+                    <>
+                      <button
+                        onClick={() => onApprovePayment(p.id, p.userId)}
+                        className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/25 flex items-center gap-1.5 transition-all"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Approve & Activate</span>
+                      </button>
+                      <button
+                        onClick={() => onRejectPayment(p.id)}
+                        className="px-3 py-2 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 transition-all"
+                      >
+                        Reject
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* TAB: Promotions Moderation (Centralized Promote System) */}
+      {activeTab === 'promotions' && (
+        <div className="bg-white border border-amber-300 rounded-3xl p-6 shadow-[0_10px_35px_-5px_rgba(245,158,11,0.15)] space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+            <div>
+              <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
+                <span>📣</span> SargodhaMart Promote & Feature Payments Queue
+              </h3>
+              <p className="text-xs text-slate-500 font-medium">
+                Verify Rs. 1,000 (15-day) promotion payments for Products & Digital Skills. Items become ⭐ FEATURED only after approval.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-amber-800 bg-amber-50 border border-amber-200 px-3 py-1 rounded-xl">
+                Fee: Rs. 1,000 / 15 Days (Separate from Activation)
+              </span>
+            </div>
+          </div>
+
+          {/* Sub-Filters: Status & Timeframe */}
+          <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-1.5 overflow-x-auto p-1 bg-slate-100 rounded-2xl">
+              {(['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'EXPIRED'] as const).map((st) => (
+                <button
+                  key={st}
+                  type="button"
+                  onClick={() => setPromoTab(st)}
+                  className={`px-3 py-1.5 rounded-xl font-bold transition-all ${
+                    promoTab === st
+                      ? 'bg-white text-slate-950 shadow-sm border border-slate-200'
+                      : 'text-slate-600 hover:text-slate-950'
+                  }`}
+                >
+                  {st === 'ALL' && `All (${promotions.length})`}
+                  {st === 'PENDING' && `Pending (${promotions.filter((p) => p.status === 'PENDING').length})`}
+                  {st === 'APPROVED' && `Approved (${promotions.filter((p) => p.status === 'APPROVED').length})`}
+                  {st === 'REJECTED' && `Rejected (${promotions.filter((p) => p.status === 'REJECTED').length})`}
+                  {st === 'EXPIRED' && `Expired (${promotions.filter((p) => p.status === 'EXPIRED').length})`}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-slate-500 font-bold text-[11px]">Filter Date:</span>
+              <select
+                value={promoTimeframe}
+                onChange={(e) => setPromoTimeframe(e.target.value as any)}
+                className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white font-bold text-slate-800 text-xs"
+              >
+                <option value="all">All Time</option>
+                <option value="today">Today</option>
+                <option value="7days">Last 7 Days</option>
+                <option value="30days">Last 30 Days</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Promotion Requests List */}
+          {promotions
+            .filter((p) => (promoTab === 'ALL' ? true : p.status === promoTab))
+            .length === 0 ? (
+            <div className="p-12 text-center rounded-2xl bg-slate-50 border border-slate-200">
+              <Megaphone className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+              <p className="text-xs font-bold text-slate-700">No promotion requests found in this view.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {promotions
+                .filter((p) => (promoTab === 'ALL' ? true : p.status === promoTab))
+                .map((p) => (
+                  <div
+                    key={p.id}
+                    className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-slate-700">#{p.id}</span>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                            p.promotionType === 'PRODUCT'
+                              ? 'bg-cyan-100 text-cyan-800'
+                              : 'bg-fuchsia-100 text-fuchsia-800'
+                          }`}
+                        >
+                          {p.promotionType} PROMOTION
+                        </span>
+                        <span className="font-black text-slate-900 text-sm">{p.entityTitle}</span>
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
+                            p.status === 'APPROVED'
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                              : p.status === 'PENDING'
+                              ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                              : p.status === 'REJECTED'
+                              ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                              : 'bg-slate-200 text-slate-600'
+                          }`}
+                        >
+                          {p.status}
+                        </span>
+                      </div>
+
+                      <div className="text-slate-600 font-medium">
+                        Seller: <strong>{p.userName}</strong> • Phone: {p.userPhone || 'N/A'} • TID:{' '}
+                        <span className="font-mono text-cyan-800 font-bold">{p.transactionReference}</span> • Amount:{' '}
+                        <strong className="text-emerald-700 font-bold">Rs. {p.amount.toLocaleString()}</strong> ({p.durationDays} Days)
+                      </div>
+
+                      <div className="text-slate-500 text-[10px]">
+                        Submitted: {p.submittedAt.slice(0, 16)}
+                        {p.startAt && p.endAt && (
+                          <span className="ml-2 font-bold text-amber-700">
+                            Active: {p.startAt.slice(0, 10)} to {p.endAt.slice(0, 10)}
+                          </span>
+                        )}
+                        {p.rejectionReason && (
+                          <span className="ml-2 text-rose-600 font-bold">Rejection: {p.rejectionReason}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      {p.paymentScreenshot && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPromoScreenshot(p.paymentScreenshot)}
+                          className="px-3 py-1.5 rounded-xl bg-white border border-slate-300 text-slate-800 font-bold text-xs hover:bg-slate-100 flex items-center gap-1 shadow-xs"
+                        >
+                          <ImageIcon className="w-3.5 h-3.5 text-cyan-600" />
+                          <span>Receipt Proof</span>
+                        </button>
+                      )}
+
+                      {p.status === 'PENDING' && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => onApprovePromotion(p.id)}
+                            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-600/25 flex items-center gap-1.5 transition-all"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Approve & Feature (15 Days)</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setRejectPromoModalId(p.id);
+                              setRejectionReasonText('');
+                            }}
+                            className="px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs border border-rose-300 transition-all"
+                          >
+                            Reject
+                          </button>
+                        </>
+                      )}
+
+                      {p.status === 'APPROVED' && onPublishToTelegram && (
+                        <button
+                          type="button"
+                          onClick={() => onPublishToTelegram(p.promotionType === 'PRODUCT' ? 'product' : 'job', p.entityId)}
+                          className="px-3 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-bold text-xs flex items-center gap-1 shadow-sm transition-all"
+                          title="Broadcast Featured Promo to Telegram Channel"
+                        >
+                          <Send className="w-3.5 h-3.5" />
+                          <span>Telegram Push</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB: Advertising Pricing & Package Manager */}
+      {activeTab === 'advertising' && (
+        <AdminAdvertisingManager
+          packages={advertisingPackages}
+          advertisements={advertisements}
+          onSavePackage={onSaveAdvertisingPackage}
+          onDeletePackage={onDeleteAdvertisingPackage}
+          onApproveAd={onApproveAdvertisement}
+          onRejectAd={onRejectAdvertisement}
+          onToggleAdSuspension={onToggleAdSuspension}
+          onRetryTelegram={onRetryAdTelegram}
+          settings={settings}
+        />
+      )}
+
+      {/* TAB: Colleges, Admissions & Campus Ads Manager */}
+      {activeTab === 'colleges' && (
+        <AdminCollegesManager
+          collegeAds={collegeAds}
+          settings={settings}
+          onApproveAd={onApproveCollegeAd}
+          onRejectAd={onRejectCollegeAd}
+          onSuspendAd={onSuspendCollegeAd}
+          onDeleteAd={onDeleteCollegeAd}
+          onUpdateSettings={onSaveSettings}
+          onShowToast={(msg) => console.log(msg)}
+        />
+      )}
+
+      {/* TAB: Payment Methods & Advertising Payment Settings */}
+      {activeTab === 'payments' && (
+        <AdminPaymentMethodsManager
+          paymentMethods={paymentMethods}
+          onSavePaymentMethod={onSavePaymentMethod}
+          onDeletePaymentMethod={onDeletePaymentMethod}
+          onToggleStatus={onTogglePaymentMethodStatus}
+        />
+      )}
+
+      {/* TAB: Digital Skills Moderation */}
+      {activeTab === 'skills' && (
+        <div className="bg-white border border-fuchsia-300 rounded-3xl p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div>
+              <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
+                <span>💻</span> Digital Skills & Freelance Profiles Directory
+              </h3>
+              <p className="text-xs text-slate-500">
+                Review and moderate local digital creators, website designers, video editors, and developers.
+              </p>
+            </div>
+            <span className="text-xs font-bold text-fuchsia-700 bg-fuchsia-50 border border-fuchsia-200 px-3 py-1 rounded-xl">
+              Total Profiles: {skills.length}
+            </span>
+          </div>
+
+          {skills.length === 0 ? (
+            <div className="p-12 text-center rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-500">
+              No digital skill profiles registered yet.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {skills.map((s) => (
+                <div
+                  key={s.id}
+                  className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs"
+                >
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={s.profilePhoto}
+                      alt={s.fullName}
+                      className="w-12 h-12 rounded-xl object-cover border border-slate-200 shrink-0"
+                    />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-black text-slate-900 text-sm">{s.fullName}</span>
+                        {s.isFeatured && (
+                          <span className="px-1.5 py-0.5 rounded-md bg-amber-400 text-slate-950 text-[9px] font-black uppercase">
+                            ⭐ FEATURED
+                          </span>
+                        )}
+                        <span className="px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 text-[10px] font-bold">
+                          {s.category}
+                        </span>
+                      </div>
+                      <div className="text-xs font-bold text-fuchsia-800">{s.professionalTitle}</div>
+                      <div className="text-slate-500 text-[11px]">
+                        Main: {s.mainSkill} • {s.experience} • Location: {s.tehsilName || 'Sargodha'} • Phone: {s.phone}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {onToggleSkillStatus && (
+                      <button
+                        type="button"
+                        onClick={() => onToggleSkillStatus(s.id)}
+                        className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-all ${
+                          s.status === 'approved'
+                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                            : 'bg-amber-100 text-amber-800 border border-amber-300'
+                        }`}
+                      >
+                        {s.status === 'approved' ? 'Active Approved' : 'Pending Approval'}
+                      </button>
+                    )}
+
+                    {onDeleteSkill && (
+                      <button
+                        type="button"
+                        onClick={() => onDeleteSkill(s.id)}
+                        className="p-2 rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200"
+                        title="Delete skill profile"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 2: Products Moderation */}
+      {activeTab === 'products' && (
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-3">
+          {listings.map((l) => (
+            <div
+              key={l.id}
+              className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-4 text-xs"
+            >
+              <div className="flex items-center gap-3">
+                <img src={l.images[0]} alt={l.title} className="w-14 h-14 rounded-xl object-cover border border-slate-200" />
+                <div>
+                  <div className="font-bold text-slate-900 text-sm line-clamp-1">{l.title}</div>
+                  <div className="text-slate-600 font-medium">
+                    Rs. {l.price.toLocaleString()} • {l.city} • Seller: {l.sellerName} ({l.sellerPhone})
+                  </div>
+                  <div className="text-slate-500 text-[10px]">
+                    Status: <span className="text-cyan-800 font-bold">{l.status}</span> • Views: {l.views}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => onToggleListingFeatured(l.id)}
+                  className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 ${
+                    l.isFeatured
+                      ? 'bg-fuchsia-600 text-white shadow-sm'
+                      : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <Sparkles className="w-3 h-3" />
+                  {l.isFeatured ? 'Featured' : 'Make Featured'}
+                </button>
+
+                <button
+                  onClick={() => onToggleListingStatus(l.id)}
+                  className={`px-3 py-1.5 rounded-xl font-bold text-xs ${
+                    l.status === 'published' ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                  }`}
+                >
+                  {l.status === 'published' ? 'Disable' : 'Publish'}
+                </button>
+
+                {/* Telegram Broadcast Button */}
+                {l.status === 'published' ? (
+                  l.telegramPublished ? (
+                    <div className="flex items-center gap-1 bg-sky-50 border border-sky-200 px-2 py-1 rounded-xl text-[10px] font-bold text-sky-800">
+                      <Send className="w-3 h-3 text-sky-500" />
+                      <span>Sent {l.telegramMessageId ? `#${l.telegramMessageId}` : ''}</span>
+                      {onPublishToTelegram && (
+                        <button
+                          type="button"
+                          onClick={() => onPublishToTelegram('product', l.id, true)}
+                          title="Resend to Telegram Channel"
+                          className="p-0.5 rounded hover:bg-sky-200 text-sky-700 ml-1 transition-colors"
+                        >
+                          <RefreshCw className="w-2.5 h-2.5" />
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    onPublishToTelegram && (
+                      <button
+                        type="button"
+                        onClick={() => onPublishToTelegram('product', l.id)}
+                        className="px-2.5 py-1.5 rounded-xl font-bold text-xs bg-sky-500 hover:bg-sky-400 text-white flex items-center gap-1 shadow-sm transition-all"
+                        title="Publish to Telegram Channel"
+                      >
+                        <Send className="w-3 h-3" />
+                        <span>Telegram</span>
+                      </button>
+                    )
+                  )
+                ) : (
+                  <span className="text-[10px] text-slate-400 font-medium px-1.5" title="Approve product to enable Telegram broadcast">
+                    Pending
+                  </span>
+                )}
+
+                <button
+                  onClick={() => onDeleteListing(l.id)}
+                  className="p-2 rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* TAB 3: Jobs Moderation */}
+      {activeTab === 'jobs' && (
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-3">
+          {jobs.map((j) => (
+            <div
+              key={j.id}
+              className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-4 text-xs"
+            >
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                      j.postType === 'need_worker' ? 'bg-blue-100 text-blue-800 border border-blue-200' : 'bg-cyan-100 text-cyan-800 border border-cyan-200'
+                    }`}
+                  >
+                    {j.postType === 'need_worker' ? 'Hiring' : 'Seeking Work'}
+                  </span>
+                  <span className="font-bold text-slate-900 text-sm">{j.title}</span>
+                </div>
+                <div className="text-slate-600 font-medium">
+                  {j.city} ({j.area}) • Contact: {j.phone} • Skills: {j.skills}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => onToggleJobStatus(j.id)}
+                  className={`px-3 py-1.5 rounded-xl font-bold text-xs ${
+                    j.status === 'published' ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                  }`}
+                >
+                  {j.status === 'published' ? 'Disable' : 'Enable'}
+                </button>
+
+                {/* Telegram Broadcast Button */}
+                {j.status === 'published' ? (
+                  j.telegramPublished ? (
+                    <div className="flex items-center gap-1 bg-sky-50 border border-sky-200 px-2 py-1 rounded-xl text-[10px] font-bold text-sky-800">
+                      <Send className="w-3 h-3 text-sky-500" />
+                      <span>Sent {j.telegramMessageId ? `#${j.telegramMessageId}` : ''}</span>
+                      {onPublishToTelegram && (
+                        <button
+                          type="button"
+                          onClick={() => onPublishToTelegram('job', j.id, true)}
+                          title="Resend to Telegram Channel"
+                          className="p-0.5 rounded hover:bg-sky-200 text-sky-700 ml-1 transition-colors"
+                        >
+                          <RefreshCw className="w-2.5 h-2.5" />
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    onPublishToTelegram && (
+                      <button
+                        type="button"
+                        onClick={() => onPublishToTelegram('job', j.id)}
+                        className="px-2.5 py-1.5 rounded-xl font-bold text-xs bg-sky-500 hover:bg-sky-400 text-white flex items-center gap-1 shadow-sm transition-all"
+                        title="Publish to Telegram Channel"
+                      >
+                        <Send className="w-3 h-3" />
+                        <span>Telegram</span>
+                      </button>
+                    )
+                  )
+                ) : (
+                  <span className="text-[10px] text-slate-400 font-medium px-1.5" title="Approve job to enable Telegram broadcast">
+                    Disabled
+                  </span>
+                )}
+
+                <button
+                  onClick={() => onDeleteJob(j.id)}
+                  className="p-2 rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* TAB 4: Location Hierarchy Management (Division -> District -> Tehsil -> Area) */}
+      {activeTab === 'locations' && (
+        <AdminLocationManager
+          districts={districts}
+          tehsils={tehsils}
+          areas={areas}
+          onAddDistrict={onAddDistrict}
+          onUpdateDistrict={onUpdateDistrict}
+          onDeleteDistrict={onDeleteDistrict}
+          onAddTehsil={onAddTehsil}
+          onUpdateTehsil={onUpdateTehsil}
+          onDeleteTehsil={onDeleteTehsil}
+          onAddArea={onAddArea}
+          onUpdateArea={onUpdateArea}
+          onDeleteArea={onDeleteArea}
+        />
+      )}
+
+      {/* TAB 5: Users Management */}
+      {activeTab === 'users' && (
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-3">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div>
+              <h3 className="font-bold text-slate-900 text-sm">Registered User Accounts & Session Control</h3>
+              <p className="text-slate-500 text-xs">Manage active accounts, roles, and administrative force logout</p>
+            </div>
+            <span className="text-xs font-bold text-slate-500">Total Users: {users.length}</span>
+          </div>
+
+          {users.map((u) => (
+            <div
+              key={u.id}
+              className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+            >
+              <div>
+                <div className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                  <span>{u.name}</span>
+                  {u.isVerified && <VerifiedBadge size="xs" />}
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${u.role === 'super_admin' ? 'bg-rose-100 text-rose-800 border border-rose-300' : 'bg-slate-200 text-slate-700'}`}>
+                    {u.role}
+                  </span>
+                  {currentUser.id === u.id && (
+                    <span className="text-[10px] text-cyan-800 font-extrabold bg-cyan-100 px-2 py-0.5 rounded-full border border-cyan-300">
+                      You (Current Session)
+                    </span>
+                  )}
+                </div>
+                <div className="text-slate-600 font-medium mt-0.5 flex items-center gap-2 flex-wrap">
+                  <span>{u.mobile} • {u.city} • {u.email}</span>
+                  {u.verifiedShopName && (
+                    <span className="text-blue-700 font-bold bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200 text-[10px]">
+                      Trade: {u.verifiedShopName}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <span
+                  className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase ${
+                    u.activationStatus === 'active'
+                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                      : 'bg-amber-100 text-amber-800 border border-amber-300'
+                  }`}
+                >
+                  {u.activationStatus === 'active' ? 'Active Seller' : 'Pending Activation'}
+                </span>
+
+                {/* Direct Verification Badge Toggle */}
+                {onToggleUserVerified && (
+                  <button
+                    onClick={() => onToggleUserVerified(u.id)}
+                    className={`px-2.5 py-1 rounded-xl font-bold text-xs flex items-center gap-1 transition-all ${
+                      u.isVerified
+                        ? 'bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-300 shadow-xs'
+                        : 'bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 border border-slate-200'
+                    }`}
+                    title={u.isVerified ? 'Click to revoke verified badge' : 'Click to directly grant blue verified badge'}
+                  >
+                    <ShieldCheck className={`w-3.5 h-3.5 ${u.isVerified ? 'text-blue-600' : 'text-slate-400'}`} />
+                    <span>{u.isVerified ? 'Verified (Revoke)' : 'Verify User'}</span>
+                  </button>
+                )}
+
+                {/* Force Logout Button */}
+                <button
+                  onClick={() => onForceLogoutUser(u.id)}
+                  className="px-3 py-1.5 rounded-xl font-bold text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 flex items-center gap-1.5 transition-all shadow-xs"
+                  title={`Force logout session for ${u.name}`}
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Force Logout</span>
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* TAB 4.5: Telegram Verifications Queue & Audit Log */}
+      {activeTab === 'telegram' && (
+        <div className="space-y-6">
+          <div className="bg-white border border-cyan-200 rounded-3xl p-6 shadow-[0_10px_35px_-5px_rgba(6,182,212,0.12)]">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <Send className="w-5 h-5 text-cyan-600" />
+                  <span>Telegram Contact Verification Queue</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Authorize or reject seller submitted Telegram contact numbers. Non-approved numbers remain private and hidden.
+                </p>
+              </div>
+
+              {/* Status Filter Buttons */}
+              <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-2xl text-xs font-bold">
+                {(['ALL', 'PENDING', 'APPROVED', 'REJECTED'] as const).map((filter) => {
+                  const count =
+                    filter === 'ALL'
+                      ? users.filter((u) => u.telegramNumber).length
+                      : users.filter((u) => u.telegramStatus === filter).length;
+                  return (
+                    <button
+                      key={filter}
+                      onClick={() => setTelegramFilter(filter)}
+                      className={`px-3 py-1.5 rounded-xl transition-all ${
+                        telegramFilter === filter
+                          ? 'bg-white text-slate-950 shadow-xs'
+                          : 'text-slate-600 hover:text-slate-950'
+                      }`}
+                    >
+                      {filter} ({count})
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Verification Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-[10px] font-bold">
+                    <th className="py-3 px-4">User</th>
+                    <th className="py-3 px-4">Telegram Number</th>
+                    <th className="py-3 px-4">Privacy Setting</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4">Submitted Date</th>
+                    <th className="py-3 px-4">Reviewed By</th>
+                    <th className="py-3 px-4">Reviewed Date</th>
+                    <th className="py-3 px-4">Rejection Reason</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {users
+                    .filter((u) => {
+                      if (!u.telegramNumber) return false;
+                      if (telegramFilter === 'ALL') return true;
+                      return u.telegramStatus === telegramFilter;
+                    })
+                    .map((u) => (
+                      <tr key={u.id} className="hover:bg-slate-50/70">
+                        <td className="py-3 px-4">
+                          <div className="font-bold text-slate-900">{u.name}</div>
+                          <div className="text-[11px] text-slate-500">
+                            {u.email} • {u.city}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 font-mono font-bold text-cyan-900">
+                          {u.telegramNumber}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              u.telegramVisibility === 'VISIBLE'
+                                ? 'bg-cyan-100 text-cyan-800'
+                                : 'bg-slate-100 text-slate-600'
+                            }`}
+                          >
+                            {u.telegramVisibility === 'VISIBLE' ? 'Visible' : 'Hidden'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
+                              u.telegramStatus === 'APPROVED'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : u.telegramStatus === 'PENDING'
+                                ? 'bg-amber-100 text-amber-800 animate-pulse'
+                                : u.telegramStatus === 'REJECTED'
+                                ? 'bg-rose-100 text-rose-800'
+                                : 'bg-slate-100 text-slate-600'
+                            }`}
+                          >
+                            {u.telegramStatus || 'NONE'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-slate-500 text-[11px]">
+                          {u.telegramSubmittedAt || 'N/A'}
+                        </td>
+                        <td className="py-3 px-4 text-slate-700 font-medium">
+                          {u.telegramReviewedBy || '-'}
+                        </td>
+                        <td className="py-3 px-4 text-slate-500 text-[11px]">
+                          {u.telegramReviewedAt || '-'}
+                        </td>
+                        <td className="py-3 px-4 text-rose-600 max-w-[150px] truncate">
+                          {u.telegramRejectionReason || '-'}
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {u.telegramStatus !== 'APPROVED' && (
+                              <button
+                                onClick={() => onApproveUserTelegram(u.id)}
+                                className="px-2.5 py-1 rounded-lg font-bold text-[11px] bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs"
+                                title="Approve Telegram Number"
+                              >
+                                Approve
+                              </button>
+                            )}
+
+                            {u.telegramStatus !== 'REJECTED' && (
+                              <button
+                                onClick={() => {
+                                  setRejectTelegramUserId(u.id);
+                                  setTelegramRejectReason('');
+                                }}
+                                className="px-2.5 py-1 rounded-lg font-bold text-[11px] bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200"
+                                title="Reject Telegram Number"
+                              >
+                                Reject
+                              </button>
+                            )}
+
+                            {u.telegramStatus === 'APPROVED' && (
+                              <button
+                                onClick={() => onRevokeUserTelegram(u.id)}
+                                className="px-2.5 py-1 rounded-lg font-bold text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700"
+                                title="Revoke Approval"
+                              >
+                                Unverify
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  {users.filter((u) => {
+                    if (!u.telegramNumber) return false;
+                    if (telegramFilter === 'ALL') return true;
+                    return u.telegramStatus === telegramFilter;
+                  }).length === 0 && (
+                    <tr>
+                      <td colSpan={9} className="py-8 text-center text-slate-400">
+                        No Telegram verification requests found in this filter.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Audit Trail Table */}
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs">
+            <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <Clock className="w-4 h-4 text-slate-500" />
+              Telegram Verification Audit Trail ({telegramAuditLogs.length} events recorded)
+            </h4>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-[10px] font-bold">
+                    <th className="py-2.5 px-3">Date & Time</th>
+                    <th className="py-2.5 px-3">User</th>
+                    <th className="py-2.5 px-3">Telegram Number</th>
+                    <th className="py-2.5 px-3">Action Type</th>
+                    <th className="py-2.5 px-3">Resulting Status</th>
+                    <th className="py-2.5 px-3">Reviewed By</th>
+                    <th className="py-2.5 px-3">Reason / Details</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {telegramAuditLogs.slice(0, 15).map((log) => (
+                    <tr key={log.id} className="hover:bg-slate-50/60">
+                      <td className="py-2 px-3 text-slate-500 text-[11px]">{log.timestamp}</td>
+                      <td className="py-2 px-3 font-bold text-slate-800">{log.userName}</td>
+                      <td className="py-2 px-3 font-mono text-cyan-900">{log.telegramNumber}</td>
+                      <td className="py-2 px-3">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-slate-100 text-slate-700">
+                          {log.actionType}
+                        </span>
+                      </td>
+                      <td className="py-2 px-3">
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
+                            log.status === 'APPROVED'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : log.status === 'PENDING'
+                              ? 'bg-amber-100 text-amber-800'
+                              : log.status === 'REJECTED'
+                              ? 'bg-rose-100 text-rose-800'
+                              : 'bg-slate-100 text-slate-600'
+                          }`}
+                        >
+                          {log.status}
+                        </span>
+                      </td>
+                      <td className="py-2 px-3 text-slate-600">{log.reviewedBy || '-'}</td>
+                      <td className="py-2 px-3 text-slate-500 text-[11px] max-w-[200px] truncate">
+                        {log.rejectionReason || '-'}
+                      </td>
+                    </tr>
+                  ))}
+                  {telegramAuditLogs.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="py-4 text-center text-slate-400">
+                        No audit trail entries yet. Submissions and reviews will be logged here.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 5: Advanced Reports Moderation System */}
+      {activeTab === 'reports' && (
+        <AdminReportsManager
+          reports={reports}
+          onResolveReport={onResolveReport}
+          onUpdateReportStatus={onUpdateReportStatus}
+          onDeleteContent={onDeleteContent}
+        />
+      )}
+
+      {/* TAB 6: Nationwide Trucking & Freight Management */}
+      {activeTab === 'freight' && (
+        <AdminFreightManager
+          trucks={trucks}
+          loads={loads}
+          transporters={transporters}
+          quotations={quotations}
+          bookings={bookings}
+          subscriptionPlans={subscriptionPlans}
+          subscriptionPurchases={subscriptionPurchases}
+          onApproveSubscription={onApproveSubscription}
+          onRejectSubscription={onRejectSubscription}
+          onSaveSubscriptionPlan={onSaveSubscriptionPlan}
+          onDeleteSubscriptionPlan={onDeleteSubscriptionPlan}
+          onToggleTransporterStatus={onToggleTransporterStatus}
+          onUpdateDealStatus={onUpdateDealStatus}
+          settings={settings}
+          onSaveSettings={onSaveSettings}
+        />
+      )}
+
+      {/* TAB 7: Verified Seller / Business Badges Management */}
+      {activeTab === 'verifications' && (
+        <AdminVerificationManager
+          verifications={verifications}
+          settings={settings}
+          onSaveSettings={onSaveSettings}
+          onApproveVerification={onApproveVerification}
+          onRejectVerification={onRejectVerification}
+          onRevokeVerification={onRevokeVerification}
+        />
+      )}
+
+      {/* TAB 8: Central Website Settings System */}
+      {activeTab === 'settings' && (
+        <AdminSettingsManager
+          settings={settings}
+          onSaveSettings={onSaveSettings}
+          announcements={announcements}
+          onAddAnnouncement={onAddAnnouncement}
+          onUpdateAnnouncement={onUpdateAnnouncement}
+          onDeleteAnnouncement={onDeleteAnnouncement}
+          telegramLogs={telegramLogs}
+          onAddTelegramLog={onAddTelegramLog}
+          onPublishToTelegram={onPublishToTelegram}
+        />
+      )}
+
+      {/* Dual Verification Modal (Payment Proof + WhatsApp Channel Screenshot) */}
+      {selectedVerificationPayment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md overflow-y-auto">
+          <div className="relative w-full max-w-4xl bg-white border border-cyan-200 rounded-3xl p-6 md:p-8 shadow-[0_20px_60px_-15px_rgba(6,182,212,0.25)] my-8">
+            <button
+              onClick={() => setSelectedVerificationPayment(null)}
+              className="absolute top-5 right-5 p-2 rounded-xl text-slate-400 hover:text-slate-800 hover:bg-slate-100"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <h3 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
+              <Shield className="w-5 h-5 text-rose-600" /> Dual-Verification Inspection
+            </h3>
+            <p className="text-slate-600 text-xs mb-6 font-medium">
+              User: <strong className="text-slate-900">{selectedVerificationPayment.userName}</strong> ({selectedVerificationPayment.userCity}) • Phone:{' '}
+              <strong className="text-slate-900">{selectedVerificationPayment.userPhone}</strong> • TRX ID:{' '}
+              <strong className="text-cyan-800 font-mono font-bold">{selectedVerificationPayment.transactionId}</strong>
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              {/* Proof 1: Payment Screenshot */}
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                <div className="text-xs font-bold text-cyan-800 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <span>1️⃣</span> Rs. 1,000 Payment Screenshot
+                </div>
+                <div className="aspect-4/3 rounded-xl overflow-hidden bg-white border border-slate-200">
+                  <img
+                    src={selectedVerificationPayment.paymentScreenshot}
+                    alt="Payment Transfer Proof"
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <div className="mt-2 text-[11px] text-slate-600 font-medium">
+                  Method: {selectedVerificationPayment.method} • Sender: {selectedVerificationPayment.senderNumber}
+                </div>
+              </div>
+
+              {/* Proof 2: WhatsApp Channel Screenshot (Optional) */}
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                <div className="text-xs font-bold text-emerald-800 uppercase tracking-wider mb-2 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <span>📲</span> WhatsApp Follow
+                  </span>
+                  <span className="text-[10px] font-bold text-slate-500 bg-slate-200/70 px-2 py-0.5 rounded-full">
+                    Optional
+                  </span>
+                </div>
+                <div className="aspect-4/3 rounded-xl overflow-hidden bg-white border border-slate-200 flex items-center justify-center">
+                  {selectedVerificationPayment.whatsappScreenshot && selectedVerificationPayment.whatsappScreenshot !== 'proof-placeholder' ? (
+                    <img
+                      src={selectedVerificationPayment.whatsappScreenshot}
+                      alt="WhatsApp Channel Follow Proof"
+                      className="w-full h-full object-contain"
+                    />
+                  ) : (
+                    <div className="p-4 text-center text-slate-400">
+                      <MessageCircle className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                      <div className="text-xs font-bold text-slate-600">No Screenshot Provided</div>
+                      <div className="text-[10px] text-slate-400 mt-1">WhatsApp follow is optional and does not block approval.</div>
+                    </div>
+                  )}
+                </div>
+                <div className="mt-2 text-[11px] text-slate-600 font-medium">
+                  {selectedVerificationPayment.whatsappScreenshot && selectedVerificationPayment.whatsappScreenshot !== 'proof-placeholder'
+                    ? 'Optional follow screenshot attached by seller'
+                    : 'Optional community link (Membership is not required)'}
+                </div>
+              </div>
+            </div>
+
+            {/* Action Bar */}
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+              <button
+                onClick={() => setSelectedVerificationPayment(null)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-100"
+              >
+                Close
+              </button>
+              {selectedVerificationPayment.status === 'pending' && (
+                <>
+                  <button
+                    onClick={() => {
+                      onRejectPayment(selectedVerificationPayment.id);
+                      setSelectedVerificationPayment(null);
+                    }}
+                    className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-300"
+                  >
+                    Reject Verification
+                  </button>
+                  <button
+                    onClick={() => {
+                      onApprovePayment(selectedVerificationPayment.id, selectedVerificationPayment.userId);
+                      setSelectedVerificationPayment(null);
+                    }}
+                    className="px-6 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/25 flex items-center gap-1.5"
+                  >
+                    <Check className="w-4 h-4" />
+                    Approve & Activate Account
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Telegram Verification Modal */}
+      {rejectTelegramUserId !== null && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
+            <h3 className="text-base font-black text-slate-900 flex items-center gap-2 mb-2">
+              <AlertTriangle className="w-5 h-5 text-rose-600" />
+              Reject Telegram Verification
+            </h3>
+            <p className="text-xs text-slate-500 mb-4">
+              Specify a clear reason so the user can understand why their number was rejected and submit a corrected contact.
+            </p>
+
+            <div className="space-y-3 mb-6">
+              <label className="block text-xs font-bold text-slate-700">Rejection Reason</label>
+              <textarea
+                value={telegramRejectReason}
+                onChange={(e) => setTelegramRejectReason(e.target.value)}
+                placeholder="e.g. Phone number is not registered on Telegram, incorrect country code, or unreachable."
+                rows={3}
+                className="w-full p-3 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none"
+                required
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2">
+              <button
+                onClick={() => {
+                  setRejectTelegramUserId(null);
+                  setTelegramRejectReason('');
+                }}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (rejectTelegramUserId !== null) {
+                    onRejectUserTelegram(
+                      rejectTelegramUserId,
+                      telegramRejectReason.trim() || 'Telegram verification rejected by administrator.'
+                    );
+                    setRejectTelegramUserId(null);
+                    setTelegramRejectReason('');
+                  }
+                }}
+                className="px-5 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-600/20"
+              >
+                Confirm Rejection
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
